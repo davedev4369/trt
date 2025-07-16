@@ -54,11 +54,10 @@ async function forwardTrx() {
     const balance = await tronWeb.trx.getBalance(tronAddress);
     console.log(`TRX Balance: ${balance / 1_000_000} TRX`);
 
-    if (balance > 1_000_000) {
-      const amount = balance - 500_000; // leave ~0.5 TRX
-      const result = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amount);
-      
-      // Debug output
+    if (balance > 2_000_000) { // Only forward if over 2 TRX
+      const amountToSend = balance - 1_000_000; // Leave 1 TRX behind
+      const result = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amountToSend);
+
       console.log("🔍 TRX send result:", result);
 
       if (result && result.txID) {
@@ -67,7 +66,7 @@ async function forwardTrx() {
         console.error("❌ TRX send failed. No txID returned.");
       }
     } else {
-      console.log("ℹ️ TRX balance too low.");
+      console.log("ℹ️ TRX balance too low to forward safely.");
     }
   } catch (e) {
     console.error("❌ TRX Error:", e.message);
