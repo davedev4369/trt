@@ -6,82 +6,80 @@ import TronWeb from "tronweb";
 import bip39 from "bip39";
 import hdkey from "hdkey";
 
-// Load environment variables
+// ENV variables
 const {
   SEED_PHRASE,
   ETH_FORWARD_TO,
   TRX_FORWARD_TO,
-  ETH_RPC_URL,
+  ETH_RPC_URL
 } = process.env;
 
-// 🔗 ETH Setup
+// ===== ETH Setup =====
 const ethProvider = new ethers.JsonRpcProvider(ETH_RPC_URL);
 const ethWallet = ethers.Wallet.fromPhrase(SEED_PHRASE).connect(ethProvider);
 
-// 🔗 TRON Setup from BIP39 seed
+// ===== TRON Setup =====
 const seed = await bip39.mnemonicToSeed(SEED_PHRASE);
 const root = hdkey.fromMasterSeed(seed);
 const tronNode = root.derive("m/44'/195'/0'/0/0");
 const tronPrivateKey = tronNode.privateKey.toString("hex");
-const tronAddress = TronWeb.address.fromPrivateKey(tronPrivateKey);
 
 const tronWeb = new TronWeb({
   fullHost: "https://api.trongrid.io",
-  privateKey: tronPrivateKey,
+  privateKey: tronPrivateKey
 });
 
-// ⛽ Forward ETH if above 0.001 ETH
+// ===== ETH Forwarding =====
 async function forwardEth() {
   try {
     const balance = await ethProvider.getBalance(ethWallet.address);
-    if (balance > ethers.parseEther("0.001")) {
+    const min = ethers.parseEther("0.0002");
+
+    if (balance > min) {
       const tx = await ethWallet.sendTransaction({
         to: ETH_FORWARD_TO,
-        value: balance - ethers.parseEther("0.0005"), // leave gas
+        value: balance - ethers.parseEther("0.00001")
       });
       console.log(`✅ ETH forwarded: ${tx.hash}`);
     } else {
       console.log("ℹ️ ETH balance too low.");
     }
-  } catch (e) {
-    console.error("❌ ETH Error:", e.message);
+  } catch (err) {
+    console.error("❌ ETH Error:", err.message);
   }
 }
 
-// ⛽ Forward TRX if above 1 TRX (1_000_000 SUN)
+// ===== TRX Forwarding =====
 async function forwardTrx() {
   try {
-    const tronAddress = tronWeb.defaultAddress.base58;
-    const balance = await tronWeb.trx.getBalance(tronAddress);
-    const readableBalance = balance / 1_000_000;
-    console.log(`TRX Balance: ${readableBalance} TRX`);
+    const balance = await tronWeb.trx.getBalance(tronWeb.defaultAddress.base58);
+    console.log("TRX Balance:", balance / 1e6, "TRX");
 
-    const minReserve = 2_000_000; // 2 TRX reserve
-    if (balance > minReserve + 100_000) {
-      const amountToSend = balance - minReserve;
+    if (balance > 200000) {
+      const amountToSend = balance - 100000; // leave ~0.1 TRX
+      const tx = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amountToSend);
 
-      const result = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amountToSend);
-      console.log("🔍 TRX send result:", result);
-
-      if (result && result.result && result.transaction && result.transaction.txID) {
-        console.log(`✅ TRX forwarded: ${result.transaction.txID}`);
+      if (tx.result && tx.txid) {
+        console.log(`✅ TRX forwarded: ${tx.txid}`);
       } else {
-        console.error("❌ TRX send failed. No txID returned.");
+        console.log("❌ TRX send failed. No txID returned.");
+        console.log("🔍 TRX send result:", tx);
       }
     } else {
-      console.log("ℹ️ TRX balance too low to forward safely.");
+      console.log("ℹ️ TRX balance too low.");
     }
-  } catch (e) {
-    console.error("❌ TRX Error:", e.message);
+  } catch (err) {
+    console.error("❌ TRX Error:", err.message);
   }
 }
-// 🔁 Loop every 10 seconds
+
+// ===== Main Loop =====
 async function mainLoop() {
-  console.log("🚀 Bot started...");
+  console.log("🔁 Bot started...");
   while (true) {
     await forwardEth();
     await forwardTrx();
-    await new Promise(r => setTimeout(r, 5000)); // 10s
+    await new Promise(r => setTimeout(r, 1000)); // 1 second
   }
 }
 
