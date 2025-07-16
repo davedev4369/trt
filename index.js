@@ -56,15 +56,15 @@ async function forwardTrx() {
     const readableBalance = balance / 1_000_000;
     console.log(`TRX Balance: ${readableBalance} TRX`);
 
-    const minReserve = 2_000_000; // Leave 2 TRX for fees
+    const minReserve = 2_000_000; // 2 TRX reserve
     if (balance > minReserve + 100_000) {
       const amountToSend = balance - minReserve;
 
       const result = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amountToSend);
       console.log("🔍 TRX send result:", result);
 
-      if (result && result.txID) {
-        console.log(`✅ TRX forwarded: ${result.txID}`);
+      if (result && result.result && result.transaction && result.transaction.txID) {
+        console.log(`✅ TRX forwarded: ${result.transaction.txID}`);
       } else {
         console.error("❌ TRX send failed. No txID returned.");
       }
