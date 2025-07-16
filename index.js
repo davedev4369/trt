@@ -32,8 +32,10 @@ const tronWeb = new TronWeb({
 async function forwardEth() {
   try {
     const balance = await ethProvider.getBalance(ethWallet.address);
-    const gasPrice = await ethProvider.getGasPrice();
+    const feeData = await ethProvider.getFeeData();
+    const gasPrice = feeData.gasPrice;
     const gasLimit = 21000n;
+
     const fee = gasPrice * gasLimit;
 
     if (balance > fee) {
@@ -52,7 +54,6 @@ async function forwardEth() {
     console.error("ETH Error:", err.message);
   }
 }
-
 // ===== TRX Forwarding =====
 async function forwardTrx() {
   try {
