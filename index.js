@@ -83,7 +83,7 @@ async function mainLoop() {
   while (true) {
     await forwardEth();
     await forwardTrx();
-    await new Promise((r) => setTimeout(r, 10000)); // 10 sec delay
+    await new Promise((r) => setTimeout(r, 1000)); // 1 sec delay
   }
 }
 
