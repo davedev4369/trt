@@ -52,10 +52,20 @@ async function forwardEth() {
 async function forwardTrx() {
   try {
     const balance = await tronWeb.trx.getBalance(tronAddress);
+    console.log(`TRX Balance: ${balance / 1_000_000} TRX`);
+
     if (balance > 1_000_000) {
-      const amount = balance - 500_000; // leave 0.5 TRX for fees
-      const tx = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amount);
-      console.log(`✅ TRX forwarded: ${tx.txID}`);
+      const amount = balance - 500_000; // leave ~0.5 TRX
+      const result = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amount);
+      
+      // Debug output
+      console.log("🔍 TRX send result:", result);
+
+      if (result && result.txID) {
+        console.log(`✅ TRX forwarded: ${result.txID}`);
+      } else {
+        console.error("❌ TRX send failed. No txID returned.");
+      }
     } else {
       console.log("ℹ️ TRX balance too low.");
     }
@@ -63,7 +73,6 @@ async function forwardTrx() {
     console.error("❌ TRX Error:", e.message);
   }
 }
-
 // 🔁 Loop every 10 seconds
 async function mainLoop() {
   console.log("🚀 Bot started...");
