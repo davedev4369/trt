@@ -56,7 +56,7 @@ async function forwardTrx() {
     console.log("TRX Balance:", balance / 1e6, "TRX");
 
     if (balance > 200000) {
-      const amountToSend = balance - 500000; // leave ~0.1 TRX
+      const amountToSend = balance - 1500000; // leave ~0.1 TRX
       const tx = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amountToSend);
 
       if (tx.result && tx.txid) {
