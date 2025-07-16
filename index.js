@@ -88,7 +88,7 @@ async function mainLoop() {
       console.error("❌ Error:", e.message);
     }
 
-    await new Promise(r => setTimeout(r, 10000)); // ⏱️ 10 seconds delay
+    await new Promise(r => setTimeout(r, 1000)); // ⏱️ 10 seconds delay
   }
 }
 
