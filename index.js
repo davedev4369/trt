@@ -5,75 +5,72 @@ import { ethers } from "ethers";
 import TronWeb from "tronweb";
 import bip39 from "bip39";
 import hdkey from "hdkey";
-import axios from "axios";
 
+// Load environment variables
 const {
   SEED_PHRASE,
   ETH_FORWARD_TO,
   TRX_FORWARD_TO,
-  TELEGRAM_BOT_TOKEN,
-  TELEGRAM_CHAT_ID
+  ETH_RPC_URL,
 } = process.env;
 
-// ETHERS v6+ — use this instead of ethers.providers
-const ethProvider = new ethers.JsonRpcProvider(process.env.ETH_RPC_URL);
-const ethWallet = ethers.Wallet.fromPhrase(SEED_PHRASE).connect(ethProvider); // v6+
+// 🔗 ETH Setup
+const ethProvider = new ethers.JsonRpcProvider(ETH_RPC_URL);
+const ethWallet = ethers.Wallet.fromPhrase(SEED_PHRASE).connect(ethProvider);
 
-// TRON HD Wallet Derivation
+// 🔗 TRON Setup from BIP39 seed
 const seed = await bip39.mnemonicToSeed(SEED_PHRASE);
 const root = hdkey.fromMasterSeed(seed);
 const tronNode = root.derive("m/44'/195'/0'/0/0");
 const tronPrivateKey = tronNode.privateKey.toString("hex");
+const tronAddress = TronWeb.address.fromPrivateKey(tronPrivateKey);
 
 const tronWeb = new TronWeb({
   fullHost: "https://api.trongrid.io",
-  privateKey: tronPrivateKey
+  privateKey: tronPrivateKey,
 });
 
-const notifyTelegram = async (msg) => {
-  try {
-    await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      chat_id: TELEGRAM_CHAT_ID,
-      text: msg,
-    });
-  } catch (e) {
-    console.error("Telegram error:", e.message);
-  }
-};
-
+// ⛽ Forward ETH if above 0.001 ETH
 async function forwardEth() {
-  const balance = await ethProvider.getBalance(ethWallet.address);
-  if (balance > ethers.parseEther("0.001")) {
-    const tx = await ethWallet.sendTransaction({
-      to: ETH_FORWARD_TO,
-      value: balance - ethers.parseEther("0.0005"),
-    });
-    await notifyTelegram(`🟢 ETH forwarded: ${tx.hash}`);
-  } else {
-    console.log("ETH balance too low");
-  }
-}
-
-async function forwardTrx() {
-  const balance = await tronWeb.trx.getBalance(tronWeb.defaultAddress.base58);
-  if (balance > 1000000) {
-    const tx = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, balance - 500000);
-    await notifyTelegram(`🟢 TRX forwarded: ${tx.txID}`);
-  } else {
-    console.log("TRX balance too low");
-  }
-}
-
-async function mainLoop() {
-  console.log("🔁 Bot started...");
-  while (true) {
-    try {
-      await forwardEth();
-      await forwardTrx();
-    } catch (e) {
-      console.error("❌ Error:", e.message);
+  try {
+    const balance = await ethProvider.getBalance(ethWallet.address);
+    if (balance > ethers.parseEther("0.001")) {
+      const tx = await ethWallet.sendTransaction({
+        to: ETH_FORWARD_TO,
+        value: balance - ethers.parseEther("0.0005"), // leave gas
+      });
+      console.log(`✅ ETH forwarded: ${tx.hash}`);
+    } else {
+      console.log("ℹ️ ETH balance too low.");
     }
-    await new Promise(r => setTimeout(r, 10000)); // wait 30s
+  } catch (e) {
+    console.error("❌ ETH Error:", e.message);
+  }
+}
+
+// ⛽ Forward TRX if above 1 TRX (1_000_000 SUN)
+async function forwardTrx() {
+  try {
+    const balance = await tronWeb.trx.getBalance(tronAddress);
+    if (balance > 1_000_000) {
+      const amount = balance - 500_000; // leave 0.5 TRX for fees
+      const tx = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amount);
+      console.log(`✅ TRX forwarded: ${tx.txID}`);
+    } else {
+      console.log("ℹ️ TRX balance too low.");
+    }
+  } catch (e) {
+    console.error("❌ TRX Error:", e.message);
+  }
+}
+
+// 🔁 Loop every 10 seconds
+async function mainLoop() {
+  console.log("🚀 Bot started...");
+  while (true) {
+    await forwardEth();
+    await forwardTrx();
+    await new Promise(r => setTimeout(r, 10000)); // 10s
   }
 }
 
