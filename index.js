@@ -51,13 +51,16 @@ async function forwardEth() {
 // ⛽ Forward TRX if above 1 TRX (1_000_000 SUN)
 async function forwardTrx() {
   try {
+    const tronAddress = tronWeb.defaultAddress.base58;
     const balance = await tronWeb.trx.getBalance(tronAddress);
-    console.log(`TRX Balance: ${balance / 1_000_000} TRX`);
+    const readableBalance = balance / 1_000_000;
+    console.log(`TRX Balance: ${readableBalance} TRX`);
 
-    if (balance > 2_000_000) { // Only forward if over 2 TRX
-      const amountToSend = balance - 1_000_000; // Leave 1 TRX behind
+    const minReserve = 2_000_000; // Leave 2 TRX for fees
+    if (balance > minReserve + 100_000) {
+      const amountToSend = balance - minReserve;
+
       const result = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, amountToSend);
-
       console.log("🔍 TRX send result:", result);
 
       if (result && result.txID) {
