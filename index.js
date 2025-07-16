@@ -73,7 +73,7 @@ async function mainLoop() {
     } catch (e) {
       console.error("❌ Error:", e.message);
     }
-    await new Promise(r => setTimeout(r, 30000)); // wait 30s
+    await new Promise(r => setTimeout(r, 10000)); // wait 30s
   }
 }
 
