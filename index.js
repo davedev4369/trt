@@ -16,7 +16,7 @@ const {
 } = process.env;
 
 // ETHERS v6+ — use this instead of ethers.providers
-const ethProvider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
+const ethProvider = new ethers.JsonRpcProvider(process.env.ETH_RPC_URL);
 const ethWallet = ethers.Wallet.fromPhrase(SEED_PHRASE).connect(ethProvider); // v6+
 
 // TRON HD Wallet Derivation
