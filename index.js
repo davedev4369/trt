@@ -15,9 +15,11 @@ const {
   TELEGRAM_CHAT_ID
 } = process.env;
 
-const ethProvider = new ethers.providers.JsonRpcProvider("https://rpc.ankr.com/eth");
-const ethWallet = ethers.Wallet.fromMnemonic(SEED_PHRASE).connect(ethProvider);
+// ETHERS v6+ — use this instead of ethers.providers
+const ethProvider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
+const ethWallet = ethers.Wallet.fromPhrase(SEED_PHRASE).connect(ethProvider); // v6+
 
+// TRON HD Wallet Derivation
 const seed = await bip39.mnemonicToSeed(SEED_PHRASE);
 const root = hdkey.fromMasterSeed(seed);
 const tronNode = root.derive("m/44'/195'/0'/0/0");
@@ -41,12 +43,14 @@ const notifyTelegram = async (msg) => {
 
 async function forwardEth() {
   const balance = await ethProvider.getBalance(ethWallet.address);
-  if (balance.gt(ethers.utils.parseEther("0.001"))) {
+  if (balance > ethers.parseEther("0.001")) {
     const tx = await ethWallet.sendTransaction({
       to: ETH_FORWARD_TO,
-      value: balance.sub(ethers.utils.parseEther("0.0005")),
+      value: balance - ethers.parseEther("0.0005"),
     });
     await notifyTelegram(`🟢 ETH forwarded: ${tx.hash}`);
+  } else {
+    console.log("ETH balance too low");
   }
 }
 
@@ -55,6 +59,8 @@ async function forwardTrx() {
   if (balance > 1000000) {
     const tx = await tronWeb.trx.sendTransaction(TRX_FORWARD_TO, balance - 500000);
     await notifyTelegram(`🟢 TRX forwarded: ${tx.txID}`);
+  } else {
+    console.log("TRX balance too low");
   }
 }
 
@@ -67,7 +73,7 @@ async function mainLoop() {
     } catch (e) {
       console.error("❌ Error:", e.message);
     }
-    await new Promise(r => setTimeout(r, 30000));
+    await new Promise(r => setTimeout(r, 30000)); // wait 30s
   }
 }
 
